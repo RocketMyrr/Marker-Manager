@@ -7,7 +7,7 @@ using Color = UnityEngine.Color;
 
 namespace Oxide.Plugins
 {
-    [Info("Marker Manager", "Orange", "2.1.1")]
+    [Info("Marker Manager", "RocketMyrr", "2.1.2")]
     [Description("Allows to place markers on in-game map")]
     public class MarkerManager : RustPlugin
     {
@@ -66,7 +66,7 @@ namespace Oxide.Plugins
 
                 case "add":
                 case "create":
-                    if (args.Length < 8)
+                    if (args.Length < 10)
                     {
                         Message(player, "Usage");
                     }
@@ -82,6 +82,8 @@ namespace Oxide.Plugins
                             displayName = args[5],
                             color1 = args[6],
                             color2 = args[7],
+                            alpha = float.Parse(args[8]),
+                            named = Convert.ToBoolean(args[9]),
                         };
 
                         CreateCustomMarker(def, player);
@@ -110,7 +112,7 @@ namespace Oxide.Plugins
         #region Core
 
         private void CreateMarker(Vector3 position, int duration, float refreshRate, string name, string displayName,
-            float radius = 0.3f, string colorMarker = "00FFFF", string colorOutline = "00FFFFFF")
+            float radius = 0.3f, string colorMarker = "00FFFF", string colorOutline = "00FFFFFF", float alpha = 1f, bool named = true)
         {
             var marker = new GameObject().AddComponent<CustomMapMarker>();
             marker.name = name;
@@ -119,12 +121,14 @@ namespace Oxide.Plugins
             marker.position = position;
             marker.duration = duration;
             marker.refreshRate = refreshRate;
+            marker.alpha = alpha;
+            marker.named = named;
             ColorUtility.TryParseHtmlString($"#{colorMarker}", out marker.color1);
             ColorUtility.TryParseHtmlString($"#{colorOutline}", out marker.color2);
         }
 
         private void CreateMarker(BaseEntity entity, int duration, float refreshRate, string name, string displayName,
-            float radius = 0.3f, string colorMarker = "00FFFF", string colorOutline = "00FFFFFF")
+            float radius = 0.3f, string colorMarker = "00FFFF", string colorOutline = "00FFFFFF", float alpha = 1f, bool named = true)
         {
             var marker = entity.gameObject.GetOrAddComponent<CustomMapMarker>();
             marker.name = name;
@@ -134,6 +138,8 @@ namespace Oxide.Plugins
             marker.parent = entity;
             marker.position = entity.transform.position;
             marker.duration = duration;
+            marker.alpha = alpha;
+            marker.named = named;
             ColorUtility.TryParseHtmlString($"#{colorMarker}", out marker.color1);
             ColorUtility.TryParseHtmlString($"#{colorOutline}", out marker.color2);
         }
@@ -162,11 +168,13 @@ namespace Oxide.Plugins
             var marker = new GameObject().AddComponent<CustomMapMarker>();
             marker.name = def.name;
             marker.displayName = def.displayName;
+            marker.named = def.named;
             marker.radius = def.radius;
             marker.position = def.position;
             marker.duration = def.duration;
             marker.refreshRate = def.refreshRate;
             marker.placedByPlayer = true;
+            marker.alpha = def.alpha;
             ColorUtility.TryParseHtmlString($"#{def.color1}", out marker.color1);
             ColorUtility.TryParseHtmlString($"#{def.color2}", out marker.color2);
             Message(player, "Added", marker.displayName, marker.position);
@@ -221,8 +229,8 @@ namespace Oxide.Plugins
             {
                 {
                     "Usage", "<color=#00ffff>Usage:</color>\n" +
-                             " <color=#00ffff>/marker add</color> name(code name) duration(seconds, 0 to permanent) refreshRate(30) radius(0.4) displayName (on map) colorInline (HEX) colorOutline (HEX) - Add marker on map\n" +
-                             " <color=#00ffff>/marker remove</color> name (code name, only for custom markers) - Remove marker from map"
+                             " <color=#00ffff>/marker add</color> name(code name) duration(seconds, 0 to permanent) refreshRate(30) radius(0.4) displayName(on map) colorInline(HEX) colorOutline(HEX) alpha(1) vendingonoff(true) - Add marker on map\n" +
+                             " <color=#00ffff>/marker remove</color> name(code name, only for custom markers) - Remove marker from map"
                 },
                 {"Permission", "You don't have permission to use that!"},
                 {"Added", "Marker '{0}' was added on {1}!"},
@@ -243,7 +251,7 @@ namespace Oxide.Plugins
             }
 
             var message = GetMessage(messageKey, player.UserIDString, args);
-            player.SendConsoleCommand("chat.add", (object) 0, (object) message);
+            player.SendConsoleCommand("chat.add", (object)0, (object)message);
         }
 
         #endregion
@@ -258,6 +266,8 @@ namespace Oxide.Plugins
             public float radius;
             public string color1;
             public string color2;
+            public float alpha;
+            public bool named;
             public string displayName;
             public string name;
             public float refreshRate;
@@ -291,16 +301,16 @@ namespace Oxide.Plugins
 
         private void API_CreateMarker(Vector3 position, string name,
             int duration = 0, float refreshRate = 3f, float radius = 0.4f,
-            string displayName = "Marker", string colorMarker = "00FFFF", string colorOutline = "00FFFFFF")
+            string displayName = "Marker", string colorMarker = "00FFFF", string colorOutline = "00FFFFFF", float alpha = 1f, bool named = true)
         {
-            CreateMarker(position, duration, refreshRate, name, displayName, radius, colorMarker, colorOutline);
+            CreateMarker(position, duration, refreshRate, name, displayName, radius, colorMarker, colorOutline, alpha, named);
         }
 
         private void API_CreateMarker(BaseEntity entity, string name,
             int duration = 0, float refreshRate = 3f, float radius = 0.4f,
-            string displayName = "Marker", string colorMarker = "00FFFF", string colorOutline = "00FFFFFF")
+            string displayName = "Marker", string colorMarker = "00FFFF", string colorOutline = "00FFFFFF", float alpha = 1f, bool named = true)
         {
-            CreateMarker(entity, duration, refreshRate, name, displayName, radius, colorMarker, colorOutline);
+            CreateMarker(entity, duration, refreshRate, name, displayName, radius, colorMarker, colorOutline, alpha, named);
         }
 
         private void API_RemoveMarker(string name)
@@ -322,6 +332,8 @@ namespace Oxide.Plugins
             public float radius;
             public Color color1;
             public Color color2;
+            public float alpha;
+            public bool named;
             public string displayName;
             public float refreshRate;
             public Vector3 position;
@@ -337,17 +349,20 @@ namespace Oxide.Plugins
 
             private void CreateMarkers()
             {
-                vending = GameManager.server.CreateEntity(vendingPrefab, position)
-                    .GetComponent<VendingMachineMapMarker>();
-                vending.markerShopName = displayName;
-                vending.enableSaving = false;
-                vending.Spawn();
+                if (named)
+                {
+                    vending = GameManager.server.CreateEntity(vendingPrefab, position)
+                        .GetComponent<VendingMachineMapMarker>();
+                    vending.markerShopName = displayName;
+                    vending.enableSaving = false;
+                    vending.Spawn();
+                }
 
                 generic = GameManager.server.CreateEntity(genericPrefab).GetComponent<MapMarkerGenericRadius>();
                 generic.color1 = color1;
                 generic.color2 = color2;
                 generic.radius = radius;
-                generic.alpha = 1f;
+                generic.alpha = alpha;
                 generic.enableSaving = false;
                 generic.SetParent(vending);
                 generic.Spawn();
@@ -385,7 +400,8 @@ namespace Oxide.Plugins
                     {
                         var pos = parent.transform.position;
                         transform.position = pos;
-                        vending.transform.position = pos;
+                        if (named)
+                            vending.transform.position = pos;
                     }
                 }
 
@@ -394,7 +410,8 @@ namespace Oxide.Plugins
 
             private void UpdateMarkers()
             {
-                vending.SendNetworkUpdate();
+                if (named)
+                    vending.SendNetworkUpdate();
                 generic.SendUpdate();
             }
 
